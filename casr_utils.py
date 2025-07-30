@@ -84,7 +84,7 @@ def get_CaSR_data(start_date, end_date, shapefile_path, variables,partition_rain
     if polygon.crs is None or polygon.crs.to_epsg() != 4326:
         polygon = polygon.to_crs(epsg=4326)
     polygon = polygon.geometry.union_all()
-    polygon = polygon.buffer(0.06)
+    polygon = polygon.buffer(0.1)
     valid_vars = CaSR_metadata['variables']['variable'].values
     missing = [v for v in variables if v not in valid_vars]
     if missing:
