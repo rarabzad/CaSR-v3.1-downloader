@@ -9,7 +9,7 @@ from io import BytesIO
 import datetime
 from casr_utils import get_CaSR_data
 
-st.set_page_config(page_title="CaSR Data Downloader", layout="wide")
+st.set_page_config(page_title="CaSR v3.1 Data Downloader", layout="wide")
 st.title("CaSR Data Downloader")
 
 # Sidebar inputs
@@ -147,4 +147,5 @@ if run_button:
             )
         else:
             st.warning("Processing finished but no NetCDF files were found under 'output/'.")
+
             st.info(f"Searched path: {os.path.abspath(output_dir)}")
