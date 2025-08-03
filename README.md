@@ -151,3 +151,6 @@ def get_CaSR_data(start_date, end_date, shapefile_path, variables, partition_rai
 ## 📜 License
 
 MIT License
+
+## Live Demo
+app on (steamlit)[https://casr-v31-downloader.streamlit.app/] server
