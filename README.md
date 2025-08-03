@@ -1,8 +1,3 @@
-Here is a complete GitHub-style `README.md` documentation for your **CaSR Data Downloader Streamlit App**, including its purpose, dependencies, usage instructions, and example output.
-
----
-
-````markdown
 # 🌎 CaSR Data Downloader
 
 A user-friendly Streamlit app for downloading, filtering, and extracting CaSR v3.1 NetCDF climate data over a custom shapefile region and date range.
