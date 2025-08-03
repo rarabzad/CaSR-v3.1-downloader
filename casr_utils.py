@@ -185,10 +185,15 @@ def get_CaSR_data(start_date, end_date, shapefile_path, variables,partition_rain
         PRECIPITATION.name = "P_PR0_SFC"
         PRECIPITATION.attrs["long_name"] = "Total Predicted Precipitation"
         PRECIPITATION.attrs["units"] = RN.attrs.get("units", "mm")
-        RAIN_RATIO = xr.where(PRECIPITATION > 0, RN / PRECIPITATION, 0.0)
+        RAIN_RATIO = xr.where(
+            PRECIPITATION != 0,
+            RN / PRECIPITATION,
+            np.nan
+        )
         RAIN_RATIO.name = "RAIN_RATIO"
         RAIN_RATIO.attrs["long_name"] = "Rain Ratio (Rain / Total Precipitation)"
-        RAIN_RATIO.attrs["description"] = "Set to 0 where total precipitation is zero"
+        RAIN_RATIO.attrs["description"] = "Set to nan where total precipitation is zero and the interpolated"
+        RAIN_RATIO = RAIN_RATIO.interpolate_na(dim="time", method="nearest", fill_value="extrapolate")
         RAIN = PRECIPITATION * RAIN_RATIO
         RAIN.name = "RAIN"
         RAIN.attrs["long_name"] = "Rain partitioned from total PRECIPITATION"
@@ -216,3 +221,4 @@ def get_CaSR_data(start_date, end_date, shapefile_path, variables,partition_rain
             result_files.append(os.path.join(output_dir, fname))
     print("\n✅ All variables processed.")
     return result_files
+
