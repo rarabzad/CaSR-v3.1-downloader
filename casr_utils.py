@@ -33,7 +33,7 @@ def get_CaSR_data(start_date, end_date, shapefile_path, variables,partition_rain
                 subprocess.check_call([sys.executable, "-m", "pip", "install", package])
             finally:
                 globals()[package] = importlib.import_module(package)
-    packages = ['requests','dill','numpy','pandas','geopandas','xarray','shapely','tqdm']
+    packages = ['requests','dill','numpy','pandas','geopandas','xarray','shapely','tqdm','scipy']
     install_and_import(packages)
     import os
     import requests, zipfile
@@ -75,7 +75,7 @@ def get_CaSR_data(start_date, end_date, shapefile_path, variables,partition_rain
     if partition_rain_snow:
         needed_vars = ['CaSR_v3.1_P_RN0_SFC','CaSR_v3.1_P_FR0_SFC','CaSR_v3.1_P_PE0_SFC','CaSR_v3.1_P_SN0_SFC']
         variables = list(set(variables + needed_vars))
-    with zipfile.ZipFile(BytesIO(requests.get("https://github.com/rarabzad/daymet2Raven/raw/refs/heads/main/CaSR_metadata.zip").content)) as z:
+    with zipfile.ZipFile(BytesIO(requests.get("https://github.com/rarabzad/CaSR-v3.1-downloader/raw/refs/heads/main/CaSR_metadata.zip").content)) as z:
         CaSR_metadata = dill.load(z.open("CaSR_metadata.pkl"))
     os.makedirs("download", exist_ok=True)
     start_date = pd.to_datetime(start_date)
@@ -221,4 +221,5 @@ def get_CaSR_data(start_date, end_date, shapefile_path, variables,partition_rain
             result_files.append(os.path.join(output_dir, fname))
     print("\n✅ All variables processed.")
     return result_files
+
 
