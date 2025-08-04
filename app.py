@@ -10,8 +10,14 @@ import datetime
 from casr_utils import get_CaSR_data
 
 st.set_page_config(page_title="CaSR v3.1 Data Downloader", layout="wide")
-st.title("CaSR Data Downloader")
-
+st.title("CaSR v3.1 Data Downloader")
+st.markdown(
+    "<p style='font-size: 0.9rem; color: grey;'>"
+    "This app allows users to download and process CaSR v3.1 NetCDF datasets (1980–2023) using uploaded shapefiles and selected variables. "
+    "Rain/snow partitioning is optional, and results are available as NetCDF or zipped outputs."
+    "</p>",
+    unsafe_allow_html=True
+)
 # Sidebar inputs
 st.sidebar.header("Parameters")
 start_date = st.sidebar.date_input(
@@ -149,3 +155,4 @@ if run_button:
             st.warning("Processing finished but no NetCDF files were found under 'output/'.")
 
             st.info(f"Searched path: {os.path.abspath(output_dir)}")
+
