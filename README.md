@@ -1,4 +1,4 @@
-# 🌎 CaSR Data Downloader
+# 🌎 CaSR v3.1 Data Downloader
 
 A user-friendly Streamlit app for downloading, filtering, and extracting CaSR v3.1 NetCDF climate data over a custom shapefile region and date range.
 
