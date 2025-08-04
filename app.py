@@ -14,7 +14,8 @@ st.title("CaSR v3.1 Data Downloader")
 st.markdown(
     "<p style='font-size: 0.9rem; color: grey;'>"
     "This app allows users to download and process CaSR v3.1 NetCDF datasets (1980–2023) using uploaded shapefiles and selected variables. "
-    "Rain/snow partitioning is optional, and results are available as NetCDF or zipped outputs."
+    "Rain/snow partitioning is optional, and results are available as NetCDF or zipped outputs. "
+    "For more information, see <a href='https://github.com/rarabzad/CaSR-v3.1-downloader' target='_blank'>the GitHub repository</a>."
     "</p>",
     unsafe_allow_html=True
 )
@@ -155,4 +156,5 @@ if run_button:
             st.warning("Processing finished but no NetCDF files were found under 'output/'.")
 
             st.info(f"Searched path: {os.path.abspath(output_dir)}")
+
 
