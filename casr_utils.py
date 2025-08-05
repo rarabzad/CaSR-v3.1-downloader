@@ -8,7 +8,6 @@ def get_CaSR_data(start_date, end_date, shapefile_path, variables,partition_rain
         variables (list): List of variable names. see variable options below:
         partition_rain_snow (logical): whether to partition rain and snow (additional variables may downloaded).
         output_dir (str): directory to deposit results'.
-
     VARIABLE_OPTIONS = [
         "CaSR_v3.1_A_PR0_SFC", "CaSR_v3.1_P_FB_SFC", "CaSR_v3.1_P_FI_SFC", "CaSR_v3.1_P_FR0_SFC", "CaSR_v3.1_P_GZ_09975",
         "CaSR_v3.1_P_GZ_10000", "CaSR_v3.1_P_HR_09975", "CaSR_v3.1_P_HR_1.5m", "CaSR_v3.1_P_HU_09975", "CaSR_v3.1_P_HU_1.5m",
@@ -19,7 +18,6 @@ def get_CaSR_data(start_date, end_date, shapefile_path, variables,partition_rain
         "CaSR_v3.1_P_WDC_09975", "CaSR_v3.1_P_WDC_10m", "CaSR_v3.1_A_TD_1.5m", "CaSR_v3.1_A_TT_1.5m", "CaSR_v3.1_A_CFIA_SFC",
         "CaSR_v3.1_A_PR24_SFC", "CaSR_v3.1_P_SD_LAND", "CaSR_v3.1_P_SWE_LAND"
     ]
-
     """
     import subprocess
     import sys
@@ -77,6 +75,9 @@ def get_CaSR_data(start_date, end_date, shapefile_path, variables,partition_rain
         variables = list(set(variables + needed_vars))
     with zipfile.ZipFile(BytesIO(requests.get("https://github.com/rarabzad/CaSR-v3.1-downloader/raw/refs/heads/main/CaSR_metadata.zip").content)) as z:
         CaSR_metadata = dill.load(z.open("CaSR_metadata.pkl"))
+    def url_maker(tile, variable, period):
+        return f"https://hpfx.collab.science.gc.ca/~scar700/rcas-casr/data/CaSRv3.1/netcdf_tile/{tile}/{variable}_{tile}_{period}.nc"
+    CaSR_metadata['url_maker'] = url_maker
     os.makedirs("download", exist_ok=True)
     start_date = pd.to_datetime(start_date)
     end_date   = pd.to_datetime(end_date)
@@ -221,5 +222,3 @@ def get_CaSR_data(start_date, end_date, shapefile_path, variables,partition_rain
             result_files.append(os.path.join(output_dir, fname))
     print("\n✅ All variables processed.")
     return result_files
-
-
