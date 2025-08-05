@@ -13,3 +13,4 @@ rasterio
 dask
 Fiona
 pyproj
+matplotlib.pyplot
