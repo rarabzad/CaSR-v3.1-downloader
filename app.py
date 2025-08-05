@@ -8,6 +8,9 @@ import contextlib
 from io import BytesIO
 import datetime
 from casr_utils import get_CaSR_data
+import xarray as xr
+import matplotlib.pyplot as plt
+
 
 st.set_page_config(page_title="CaSR v3.1 Data Downloader", layout="wide")
 st.title("CaSR v3.1 Data Downloader")
@@ -154,7 +157,34 @@ if run_button:
             )
         else:
             st.warning("Processing finished but no NetCDF files were found under 'output/'.")
-
+        st.subheader("Variable Preview Panels")
+        
+        for fpath in sorted(nc_files):
+            var_name = os.path.splitext(os.path.basename(fpath))[0]
+        
+            try:
+                ds = xr.open_dataset(fpath)
+                if var_name not in ds:
+                    st.warning(f"Variable '{var_name}' not found in file.")
+                    continue
+        
+                # Compute time-mean
+                da_mean = ds[var_name].mean(dim="time", skipna=True)
+        
+                # Prepare figure
+                fig, ax = plt.subplots(figsize=(6, 4))
+                img = ax.imshow(da_mean, cmap='viridis', aspect='auto')
+                ax.set_title(f"{var_name} (Mean over time)")
+                plt.colorbar(img, ax=ax, shrink=0.8, label=ds[var_name].attrs.get("units", ""))
+        
+                with st.expander(f"🔍 {var_name} preview", expanded=False):
+                    st.pyplot(fig)
+                plt.close(fig)
+                ds.close()
+        
+            except Exception as e:
+                st.error(f"Failed to process {var_name}: {e}")
             st.info(f"Searched path: {os.path.abspath(output_dir)}")
+
 
 
