@@ -30,9 +30,8 @@ This app allows users to:
 Clone this repository and install required packages:
 
 ```bash
-git clone https://github.com/yourusername/casr-data-downloader.git
-cd casr-data-downloader
-
+git clone https://github.com/rarabzad/CaSR-v3.1-downloader.git
+cd CaSR-v3.1-downloader
 pip install -r requirements.txt
 ````
 
