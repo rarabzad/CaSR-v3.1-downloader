@@ -138,26 +138,30 @@ def get_CaSR_data(start_date, end_date, shapefile_path, variables,partition_rain
                 divisor = int(total_size_gb / 0.5) + 1  # e.g. 0.6 GB → 2, 1.2 GB → 3
                 chunk_size = int(400_000 / divisor)
                 chunk_setting = {'time': chunk_size}
+
             ds = xr.open_mfdataset(var_files, combine='by_coords', chunks=chunk_setting, parallel=False)
             ds = ds.sel(time=slice(start_date, end_date))
             lat = ds['lat'].values
             lon = ds['lon'].values
             lon = np.where(lon > 180, lon - 360, lon)
+            ds['lon'] = (('rlat', 'rlon'), lon)
             minx, miny, maxx, maxy = polygon.bounds
             inside_bbox = (lon >= minx) & (lon <= maxx) & (lat >= miny) & (lat <= maxy)
-            rows_within_bbox = np.arange(np.where(inside_bbox.any(axis=1))[0].min(), np.where(inside_bbox.any(axis=1))[0].max() + 1)
-            cols_within_bbox = np.arange(np.where(inside_bbox.any(axis=0))[0].min(), np.where(inside_bbox.any(axis=0))[0].max() + 1)
-            ds = ds.isel(
-                rlon=slice(rows_within_bbox.min(), rows_within_bbox.max() + 1),
-                rlat=slice(cols_within_bbox.min(), cols_within_bbox.max() + 1)
-            )
+            rows = np.where(inside_bbox.any(axis=1))[0]
+            cols = np.where(inside_bbox.any(axis=0))[0]
+            if rows.size == 0 or cols.size == 0:
+                raise ValueError("No overlap between dataset grid and polygon bounding box.")
+            ds = ds.isel(rlat=slice(rows.min(), rows.max() + 1),rlon=slice(cols.min(), cols.max() + 1))
             lon_cropped = ds['lon'].values
             lat_cropped = ds['lat'].values
-            lon_cropped = np.where(lon_cropped > 180, lon_cropped - 360, lon_cropped)
-            points = [Point(x, y) for x, y in zip(lon_cropped.flatten(), lat_cropped.flatten())]
-            mask_flat = np.array([polygon.contains(pt) for pt in points])
-            mask = mask_flat.reshape(lon_cropped.shape)
-            ds[vname] = ds[vname].where(mask)
+            try:
+                mask = shapely.vectorized.contains(polygon, lon_cropped, lat_cropped)
+            except Exception:
+                points = [Point(x, y) for x, y in zip(lon_cropped.flatten(), lat_cropped.flatten())]
+                mask_flat = np.array([polygon.contains(pt) for pt in points])
+                mask = mask_flat.reshape(lon_cropped.shape)
+            mask_da = xr.DataArray(mask, dims=('rlat', 'rlon'),coords={'rlat': ds['rlat'], 'rlon': ds['rlon']})
+            ds[vname] = ds[vname].where(mask_da)
             outfile = os.path.join(output_dir, f"{vname}.nc")
             print(f"💾 Saving {outfile}")
             ds.to_netcdf(outfile)
@@ -222,3 +226,4 @@ def get_CaSR_data(start_date, end_date, shapefile_path, variables,partition_rain
             result_files.append(os.path.join(output_dir, fname))
     print("\n✅ All variables processed.")
     return result_files
+
