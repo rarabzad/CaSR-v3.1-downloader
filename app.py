@@ -1,18 +1,16 @@
 import streamlit as st
 import tempfile
-import zipfile
 import os
-import glob
-import io
-import contextlib
-from io import BytesIO
 import datetime
+import io
+import sys
+from zipfile import ZipFile
 from casr_utils import get_CaSR_data
-import xarray as xr
-import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="CaSR v3.1 Data Downloader", layout="wide")
-st.title("CaSR v3.1 Data Downloader")
+st.set_page_config(page_title="CaSR v3.1 Downloader", layout="wide")
+
+st.title("🌧️ CaSR v3.1 Data Downloader")
+
 st.markdown(
     "<p style='font-size: 0.9rem; color: grey;'>"
     "This app allows users to download and process CaSR v3.1 NetCDF datasets (1980–2023) using uploaded shapefiles and selected variables. "
@@ -23,155 +21,91 @@ st.markdown(
 )
 
 # Sidebar inputs
-st.sidebar.header("Parameters")
-start_date = st.sidebar.date_input(
-    "Start date",
-    value=datetime.date(1980, 1, 1),
-    min_value=datetime.date(1980, 1, 1),
-    max_value=datetime.date(2023, 12, 31),
-    help="Choose the start date (between 1980-01-01 and 2023-12-31)."
-)
-end_date = st.sidebar.date_input(
-    "End date",
-    value=datetime.date(2023, 12, 31),
-    min_value=datetime.date(1980, 1, 1),
-    max_value=datetime.date(2023, 12, 31),
-    help="Choose the end date (between 1980-01-01 and 2023-12-31)."
-)
-uploaded_zip = st.sidebar.file_uploader(
-    "Upload shapefile zip",
-    type=["zip"],
-    help="Zip containing .shp, .shx, .dbf, etc."
-)
-variables = st.sidebar.multiselect(
-    "Select variables to download/process",
-    options=[
-        "CaSR_v3.1_A_PR0_SFC", "CaSR_v3.1_P_FB_SFC", "CaSR_v3.1_P_FI_SFC", "CaSR_v3.1_P_FR0_SFC",
-        "CaSR_v3.1_P_GZ_09975", "CaSR_v3.1_P_GZ_10000", "CaSR_v3.1_P_HR_09975", "CaSR_v3.1_P_HR_1.5m",
-        "CaSR_v3.1_P_HU_09975", "CaSR_v3.1_P_HU_1.5m", "CaSR_v3.1_P_P0_SFC", "CaSR_v3.1_P_PE0_SFC",
-        "CaSR_v3.1_P_PN_SFC", "CaSR_v3.1_P_PR0_SFC", "CaSR_v3.1_P_RN0_SFC", "CaSR_v3.1_P_SN0_SFC",
-        "CaSR_v3.1_P_TD_09975", "CaSR_v3.1_P_TD_1.5m", "CaSR_v3.1_P_TT_09975", "CaSR_v3.1_P_TT_1.5m",
-        "CaSR_v3.1_P_UU_09975", "CaSR_v3.1_P_UU_10m", "CaSR_v3.1_P_UUC_09975", "CaSR_v3.1_P_UUC_10m",
-        "CaSR_v3.1_P_UVC_09975", "CaSR_v3.1_P_UVC_10m", "CaSR_v3.1_P_VV_09975", "CaSR_v3.1_P_VV_10m",
-        "CaSR_v3.1_P_VVC_09975", "CaSR_v3.1_P_VVC_10m", "CaSR_v3.1_P_WDC_09975", "CaSR_v3.1_P_WDC_10m",
-        "CaSR_v3.1_A_TD_1.5m", "CaSR_v3.1_A_TT_1.5m", "CaSR_v3.1_A_CFIA_SFC", "CaSR_v3.1_A_PR24_SFC",
-        "CaSR_v3.1_P_SD_LAND", "CaSR_v3.1_P_SWE_LAND"
-    ],
-    help="Pick one or more CaSR variables to download and process."
-)
-partition_rain_snow = st.sidebar.checkbox(
-    "Partition rain and snow?",
-    value=False,
-    help="If checked, additional variables for rain/snow partitioning will be added."
-)
-run_button = st.sidebar.button(
-    "Run Download & Process",
-    help="Click to start downloading and processing the selected data."
-)
+st.sidebar.header("Input Parameters")
 
-if run_button:
-    # Validate inputs
-    if not variables:
-        st.error("Select at least one variable.")
-        st.stop()
-    if not uploaded_zip:
-        st.error("Upload a shapefile zip first.")
-        st.stop()
+# Dates
+start_date = st.sidebar.date_input("Start Date", datetime.date(2000, 1, 1))
+end_date = st.sidebar.date_input("End Date", datetime.date(2005, 12, 31))
 
-    # Prepare environment
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    os.chdir(base_dir)
-    output_dir = os.path.join(base_dir, "output")
-    os.makedirs(output_dir, exist_ok=True)
+# Shapefile upload
+shp_zip = st.sidebar.file_uploader("Upload Shapefile (.zip)", type=["zip"])
+shapefile_path = None
+if shp_zip:
+    tmpdir = tempfile.mkdtemp()
+    zpath = os.path.join(tmpdir, "shape.zip")
+    with open(zpath, "wb") as f:
+        f.write(shp_zip.read())
+    with ZipFile(zpath, "r") as z:
+        z.extractall(tmpdir)
+    for fn in os.listdir(tmpdir):
+        if fn.lower().endswith(".shp"):
+            shapefile_path = os.path.join(tmpdir, fn)
+            break
 
-    # Unzip shapefile
-    with tempfile.TemporaryDirectory() as tmpdir:
-        zip_path = os.path.join(tmpdir, "shape.zip")
-        with open(zip_path, "wb") as f:
-            f.write(uploaded_zip.read())
-        with zipfile.ZipFile(zip_path, "r") as z:
-            z.extractall(tmpdir)
-        shp = [f for f in os.listdir(tmpdir) if f.lower().endswith(".shp")]
-        if not shp:
-            st.error("No .shp file found in zip.")
-            st.stop()
-        shapefile_path = os.path.join(tmpdir, shp[0])
-        st.info(f"Using shapefile: {shp[0]}")
+# Variable options
+VARIABLE_OPTIONS = [
+    "CaSR_v3.1_A_PR0_SFC", "CaSR_v3.1_P_FB_SFC", "CaSR_v3.1_P_FI_SFC", "CaSR_v3.1_P_FR0_SFC",
+    "CaSR_v3.1_P_GZ_09975", "CaSR_v3.1_P_GZ_10000", "CaSR_v3.1_P_HR_09975", "CaSR_v3.1_P_HR_1.5m",
+    "CaSR_v3.1_P_HU_09975", "CaSR_v3.1_P_HU_1.5m", "CaSR_v3.1_P_P0_SFC", "CaSR_v3.1_P_PE0_SFC",
+    "CaSR_v3.1_P_PN_SFC", "CaSR_v3.1_P_PR0_SFC", "CaSR_v3.1_P_RN0_SFC", "CaSR_v3.1_P_SN0_SFC",
+    "CaSR_v3.1_P_TD_09975", "CaSR_v3.1_P_TD_1.5m", "CaSR_v3.1_P_TT_09975", "CaSR_v3.1_P_TT_1.5m",
+    "CaSR_v3.1_P_UU_09975", "CaSR_v3.1_P_UU_10m", "CaSR_v3.1_P_VV_09975", "CaSR_v3.1_P_VV_10m",
+    "CaSR_v3.1_P_WDC_09975", "CaSR_v3.1_P_WDC_10m", "CaSR_v3.1_A_TT_1.5m", "CaSR_v3.1_A_CFIA_SFC",
+    "CaSR_v3.1_A_PR24_SFC", "CaSR_v3.1_P_SD_LAND", "CaSR_v3.1_P_SWE_LAND"
+]
+variables = st.sidebar.multiselect("Select Variables", VARIABLE_OPTIONS)
 
-        # Capture logs & run processing
-        log_buffer = io.StringIO()
-        with st.spinner("Downloading & processing CaSR data..."), \
-             contextlib.redirect_stdout(log_buffer), \
-             contextlib.redirect_stderr(log_buffer):
+partition_rain_snow = st.sidebar.checkbox("Partition Rain/Snow", value=False)
+
+output_dir = tempfile.mkdtemp()
+
+def run_with_capture(func, *args, **kwargs):
+    """Capture stdout/stderr while running a function."""
+    old_out, old_err = sys.stdout, sys.stderr
+    sys.stdout = io.StringIO()
+    sys.stderr = io.StringIO()
+    try:
+        result = func(*args, **kwargs)
+        out = sys.stdout.getvalue()
+        err = sys.stderr.getvalue()
+    finally:
+        sys.stdout, sys.stderr = old_out, old_err
+    return result, out, err
+
+if st.sidebar.button("🚀 Run"):
+    if not shapefile_path:
+        st.error("Please upload a valid shapefile ZIP.")
+    elif not variables:
+        st.error("Please select at least one variable.")
+    elif start_date > end_date:
+        st.error("Invalid date range.")
+    else:
+        with st.spinner("Processing CaSR data... please wait ⏳"):
             try:
-                _ = get_CaSR_data(
-                    start_date.strftime("%Y-%m-%d"),
-                    end_date.strftime("%Y-%m-%d"),
+                results, out_text, err_text = run_with_capture(
+                    get_CaSR_data,
+                    str(start_date), str(end_date),
                     shapefile_path,
                     variables,
                     partition_rain_snow,
                     output_dir
                 )
-                # stash result file list
-                st.session_state["nc_files"] = glob.glob(os.path.join(output_dir, "**", "*.nc"), recursive=True)
-                st.session_state["output_dir"] = output_dir
-            except Exception as err:
-                st.error(f"Error during processing: {err}")
-                st.stop()
+                st.success("✅ Processing Complete!")
 
-        # show console logs
-        st.markdown(
-            "<div style='background-color:black;color:white;padding:10px;"
-            "border-radius:5px;overflow:auto;max-height:300px;'>"
-            "<pre style='white-space: pre-wrap; word-wrap: break-word;'>"
-            f"{log_buffer.getvalue()}"
-            "</pre></div>",
-            unsafe_allow_html=True
-        )
+                st.subheader("Log Output")
+                st.text_area("Console Output", out_text + "\n" + err_text, height=300)
 
-# Always-render downloads & previews from last run
-if "nc_files" in st.session_state and st.session_state["nc_files"]:
-    nc_files = st.session_state["nc_files"]
-    output_dir = st.session_state["output_dir"]
+                st.subheader("Download Results")
+                for f in results:
+                    with open(f, "rb") as data:
+                        st.download_button(
+                            label=f"⬇️ {os.path.basename(f)}",
+                            data=data,
+                            file_name=os.path.basename(f),
+                            mime="application/x-netcdf"
+                        )
+            except Exception as e:
+                st.error(f"❌ Error: {e}")
 
-    # Download buttons
-    st.subheader("Result NetCDF Files")
-    for fpath in sorted(nc_files):
-        fname = os.path.basename(fpath)
-        with open(fpath, "rb") as f:
-            st.download_button(
-                label=f"Download {fname}",
-                data=f,
-                file_name=fname,
-                mime="application/x-netcdf",
-                key=f"dl_{fname}"
-            )
-
-    # Zip-all download
-    buf = BytesIO()
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zipf:
-        for fpath in nc_files:
-            arc = os.path.relpath(fpath, output_dir)
-            zipf.write(fpath, arc)
-    buf.seek(0)
-    st.download_button(
-        label="Download All as ZIP",
-        data=buf,
-        file_name="CaSR_output.zip",
-        mime="application/zip",
-        key="dl_all"
-    )
-
-    # Preview panels
-    st.subheader("Variable Preview Panels")
-    for fpath in sorted(nc_files):
-        var = os.path.splitext(os.path.basename(fpath))[0]
-        ds = xr.open_dataset(fpath)
-        da = ds[var].mean(dim="time", skipna=True)
-        fig, ax = plt.subplots(figsize=(6, 4))
-        im = ax.imshow(da, aspect="auto")
-        cbar = plt.colorbar(im, ax=ax, label=ds[var].attrs.get("units", ""))
-        with st.expander(f"🔍 {var} preview"):
-            st.pyplot(fig)
-        plt.close(fig)
-        ds.close()
+st.sidebar.markdown("---")
+st.sidebar.caption("Developed by Rezgar Arabzadeh — University of Waterloo")
