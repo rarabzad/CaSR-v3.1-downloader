@@ -6,9 +6,12 @@ import io
 import sys
 from zipfile import ZipFile
 from casr_utils import get_CaSR_data
+import glob
 
+# -------------------------------
+# Streamlit Page Config
+# -------------------------------
 st.set_page_config(page_title="CaSR v3.1 Downloader", layout="wide")
-
 st.title("🌧️ CaSR v3.1 Data Downloader")
 
 st.markdown(
@@ -20,7 +23,9 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Sidebar inputs
+# -------------------------------
+# Sidebar Inputs
+# -------------------------------
 st.sidebar.header("Input Parameters")
 
 # Dates
@@ -37,10 +42,14 @@ if shp_zip:
         f.write(shp_zip.read())
     with ZipFile(zpath, "r") as z:
         z.extractall(tmpdir)
+    # Find .shp file
     for fn in os.listdir(tmpdir):
         if fn.lower().endswith(".shp"):
             shapefile_path = os.path.join(tmpdir, fn)
+            st.sidebar.success(f"✅ Shapefile detected: {fn}")
             break
+    if not shapefile_path:
+        st.sidebar.error("❌ No .shp file found in uploaded ZIP.")
 
 # Variable options
 VARIABLE_OPTIONS = [
@@ -57,10 +66,16 @@ variables = st.sidebar.multiselect("Select Variables", VARIABLE_OPTIONS)
 
 partition_rain_snow = st.sidebar.checkbox("Partition Rain/Snow", value=False)
 
-output_dir = tempfile.mkdtemp()
+# -------------------------------
+# Fixed output directory
+# -------------------------------
+output_dir = os.path.join(os.getcwd(), "CaSR_outputs")
+os.makedirs(output_dir, exist_ok=True)
 
+# -------------------------------
+# Helper to capture function output
+# -------------------------------
 def run_with_capture(func, *args, **kwargs):
-    """Capture stdout/stderr while running a function."""
     old_out, old_err = sys.stdout, sys.stderr
     sys.stdout = io.StringIO()
     sys.stderr = io.StringIO()
@@ -72,6 +87,9 @@ def run_with_capture(func, *args, **kwargs):
         sys.stdout, sys.stderr = old_out, old_err
     return result, out, err
 
+# -------------------------------
+# Run Button
+# -------------------------------
 if st.sidebar.button("🚀 Run"):
     if not shapefile_path:
         st.error("Please upload a valid shapefile ZIP.")
@@ -92,20 +110,35 @@ if st.sidebar.button("🚀 Run"):
                 )
                 st.success("✅ Processing Complete!")
 
-                st.subheader("Log Output")
-                st.text_area("Console Output", out_text + "\n" + err_text, height=300)
+                st.subheader("Console Output")
+                st.text_area("Logs", out_text + "\n" + err_text, height=300)
 
-                st.subheader("Download Results")
-                for f in results:
-                    with open(f, "rb") as data:
-                        st.download_button(
-                            label=f"⬇️ {os.path.basename(f)}",
-                            data=data,
-                            file_name=os.path.basename(f),
-                            mime="application/x-netcdf"
-                        )
+                st.subheader("Files Created")
+                non_empty_files = []
+                for f in glob.glob(os.path.join(output_dir, "*.nc")):
+                    size = os.path.getsize(f)
+                    st.write(f"{os.path.basename(f)} — {size} bytes")
+                    if size > 0:
+                        non_empty_files.append(f)
+
+                if not non_empty_files:
+                    st.warning("⚠️ No non-empty NetCDF files were created. Check shapefile and variable selection.")
+                else:
+                    st.subheader("Download Results")
+                    for f in non_empty_files:
+                        with open(f, "rb") as data:
+                            st.download_button(
+                                label=f"⬇️ {os.path.basename(f)}",
+                                data=data,
+                                file_name=os.path.basename(f),
+                                mime="application/x-netcdf"
+                            )
+
             except Exception as e:
                 st.error(f"❌ Error: {e}")
 
+# -------------------------------
+# Footer
+# -------------------------------
 st.sidebar.markdown("---")
 st.sidebar.caption("Developed by Rezgar Arabzadeh — University of Waterloo")
