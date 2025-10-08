@@ -164,8 +164,12 @@ def get_CaSR_data(start_date, end_date, shapefile_path, variables,partition_rain
             ds[vname] = ds[vname].where(mask_da)
             outfile = os.path.join(output_dir, f"{vname}.nc")
             print(f"💾 Saving {outfile}")
+            
+            # FIX: Load data into memory before saving to avoid file locking issues
+            ds = ds.load()
             ds.to_netcdf(outfile)
             ds.close()
+            
             del ds, mask, lat, lon, lon_cropped, lat_cropped
             gc.collect()
         except Exception as e:
@@ -226,4 +230,3 @@ def get_CaSR_data(start_date, end_date, shapefile_path, variables,partition_rain
             result_files.append(os.path.join(output_dir, fname))
     print("\n✅ All variables processed.")
     return result_files
-
