@@ -29,8 +29,8 @@ st.markdown(
 st.sidebar.header("Input Parameters")
 
 # Dates
-start_date = st.sidebar.date_input("Start Date", datetime.date(2000, 1, 1))
-end_date = st.sidebar.date_input("End Date", datetime.date(2005, 12, 31))
+start_date = st.sidebar.date_input("Start Date", datetime.date(1980, 1, 1))
+end_date = st.sidebar.date_input("End Date", datetime.date(2023, 12, 31))
 
 # Shapefile upload
 shp_zip = st.sidebar.file_uploader("Upload Shapefile (.zip)", type=["zip"])
@@ -142,3 +142,4 @@ if st.sidebar.button("🚀 Run"):
 # -------------------------------
 st.sidebar.markdown("---")
 st.sidebar.caption("Developed by Rezgar Arabzadeh — University of Waterloo")
+
