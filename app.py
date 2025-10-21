@@ -29,9 +29,33 @@ st.markdown(
 st.sidebar.header("Input Parameters")
 
 # Dates
-start_date = st.sidebar.date_input("Start Date", datetime.date(1980, 1, 1))
-end_date = st.sidebar.date_input("End Date", datetime.date(2023, 12, 31))
+import streamlit as st
+import datetime
 
+# Define the allowed date range
+min_date = datetime.date(1980, 1, 1)
+max_date = datetime.date(2023, 12, 31)
+
+# Sidebar date inputs with limits
+start_date = st.sidebar.date_input(
+    "Start Date",
+    value=min_date,
+    min_value=min_date,
+    max_value=max_date
+)
+
+end_date = st.sidebar.date_input(
+    "End Date",
+    value=max_date,
+    min_value=min_date,
+    max_value=max_date
+)
+
+# Validate the date range
+if start_date > end_date:
+    st.sidebar.error("⚠️ Start Date must be before or equal to End Date.")
+else:
+    st.write(f"✅ Selected range: {start_date} → {end_date}")
 # Shapefile upload
 shp_zip = st.sidebar.file_uploader("Upload Shapefile (.zip)", type=["zip"])
 shapefile_path = None
@@ -142,4 +166,5 @@ if st.sidebar.button("🚀 Run"):
 # -------------------------------
 st.sidebar.markdown("---")
 st.sidebar.caption("Developed by Rezgar Arabzadeh — University of Waterloo")
+
 
